@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<body>
+    <div id="output">Loading Claude...</div>
+
+    <script src="https://js.puter.com/v2/"></script>
+
+    <script>
+        // 2. Call the Claude model
+        puter.ai.chat("Write a 3-sentence story about a robot student.", {model: 'claude-sonnet-4'})
+            .then(response => {
+                // 3. Display the result
+                document.getElementById('output').innerText = response.message.content[0].text;
+            })
+            .catch(err => {
+                console.error("Error:", err);
+            });
+    </script>
+</body>
+</html>
