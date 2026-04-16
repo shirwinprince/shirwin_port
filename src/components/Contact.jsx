@@ -24,29 +24,13 @@ export default function Contact() {
       return
     }
 
-    try {
-      const response = await fetch('http://localhost:5000/send-email', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: form.name,
-          email: form.email,
-          message: form.message,
-        }),
-      })
+    const subject = encodeURIComponent(`Portfolio message from ${form.name}`)
+    const body = encodeURIComponent(
+      `Name: ${form.name}\nEmail: ${form.email}\n\nMessage:\n${form.message}`,
+    )
 
-      if (response.ok) {
-        alert('Message sent successfully! ✓')
-        setForm({ name: '', email: '', message: '' })
-      } else {
-        alert('Failed to send message')
-      }
-    } catch (error) {
-      console.error('Error:', error)
-      alert('Failed to send message')
-    }
+    window.location.href = `mailto:shirwinprince@gmail.com?subject=${subject}&body=${body}`
+    setForm({ name: '', email: '', message: '' })
   }
 
   return (
