@@ -2,6 +2,13 @@ import { motion } from 'framer-motion'
 import { useInView } from './hooks/useInView'
 import { useState, useEffect } from 'react' // Added for dynamics
 
+const DEFAULT_LEETCODE_PROFILE_URL = 'https://leetcode.com/u/shirwinprince/'
+
+function getLeetcodeUsername(profileUrl) {
+  const match = profileUrl.match(/leetcode\.com\/u\/([^/]+)/i)
+  return match?.[1] || 'shirwinprince'
+}
+
 /* ── tiny SVG icons (inline, no deps) ─────────────── */
 const GithubIcon = () => (
   <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
@@ -79,6 +86,8 @@ function DifficultyBar({ label, done, total, color }) {
 
 export default function CodingStats() {
   const [ref, inView] = useInView(0.1)
+  const leetcodeProfileUrl = import.meta.env.VITE_LEETCODE_PROFILE_URL || DEFAULT_LEETCODE_PROFILE_URL
+  const leetcodeUsername = getLeetcodeUsername(leetcodeProfileUrl)
 
   // DYNAMIC STATES
   const [github, setGithub] = useState({
@@ -92,44 +101,79 @@ export default function CodingStats() {
   })
 
   const [leetcode, setLeetcode] = useState({
-    username: 'shirwinprince',
+    username: leetcodeUsername,
     rank: 'Loading..',
-    solved: { total: 0, max: 3300 },
-    easy: { done: 0, total: 820 },
-    medium: { done: 0, total: 1700 },
-    hard: { done: 0, total: 750 },
-    link: 'https://leetcode.com/u/shirwinprincej2020/',
+    solved: { total: 41, max: 3300 },
+    easy: { done: 29, total: 820 },
+    medium: { done: 10, total: 1700 },
+    hard: { done: 2, total: 750 },
+    link: leetcodeProfileUrl,
   })
 
   useEffect(() => {
+    let isMounted = true
+
     // 1. Fetch GitHub
     fetch('https://api.github.com/users/shirwinprince')
-      .then(res => res.json())
-      .then(data => {
-        setGithub(prev => ({
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error(`GitHub API error: ${res.status}`)
+        }
+        return res.json()
+      })
+      .then((data) => {
+        if (!isMounted || !data) return
+
+        setGithub((prev) => ({
           ...prev,
           repos: data.public_repos,
           followers: data.followers,
-          joined: new Date(data.created_at).getFullYear().toString()
+          joined: data.created_at ? new Date(data.created_at).getFullYear().toString() : prev.joined,
         }))
+      })
+      .catch(() => {
+        // Keep fallback values when API is unavailable.
       })
 
     // 2. Fetch LeetCode (via proxy)
-    fetch('https://leetcode-api-faisalshohag.vercel.app/api/u/shirwinprincej2020/')
-      .then(res => res.json())
-      .then(data => {
-        if(data) {
-          setLeetcode(prev => ({
-            ...prev,
-            rank: `#${data.ranking}`,
-            solved: { total: data.totalSolved, max: data.totalQuestions },
-            easy: { done: data.easySolved, total: data.totalEasy },
-            medium: { done: data.mediumSolved, total: data.totalMedium },
-            hard: { done: data.hardSolved, total: data.totalHard },
-          }))
+    fetch(`https://leetcode-api-faisalshohag.vercel.app/api/u/${leetcodeUsername}/`)
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error(`LeetCode API error: ${res.status}`)
         }
+
+        const contentType = res.headers.get('content-type') || ''
+        if (!contentType.includes('application/json')) {
+          throw new Error('LeetCode API did not return JSON')
+        }
+
+        return res.json()
       })
-  }, [])
+      .then((data) => {
+        if (!isMounted || !data) return
+
+        setLeetcode((prev) => ({
+          ...prev,
+          rank: data.ranking ? `#${data.ranking}` : prev.rank,
+          solved: { total: data.totalSolved ?? prev.solved.total, max: data.totalQuestions ?? prev.solved.max },
+          easy: { done: data.easySolved ?? prev.easy.done, total: data.totalEasy ?? prev.easy.total },
+          medium: { done: data.mediumSolved ?? prev.medium.done, total: data.totalMedium ?? prev.medium.total },
+          hard: { done: data.hardSolved ?? prev.hard.done, total: data.totalHard ?? prev.hard.total },
+        }))
+      })
+      .catch(() => {
+        if (!isMounted) return
+
+        setLeetcode((prev) => ({
+          ...prev,
+          rank: 'Unavailable',
+        }))
+      })
+
+    return () => {
+      isMounted = false
+    }
+  }, [leetcodeUsername])
 
   return (
     <section id="coding-stats" className="relative py-24 lg:py-32 bg-[#0a0a0a] tech-grid-bg">

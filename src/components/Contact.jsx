@@ -31,9 +31,23 @@ export default function Contact() {
 
     try {
       const configuredApiUrl = import.meta.env.VITE_CONTACT_API_URL
+      if (configuredApiUrl && configuredApiUrl.includes('resend.com/api-keys')) {
+        throw new Error('Invalid VITE_CONTACT_API_URL. Use your backend /api/contact URL, not the Resend dashboard URL.')
+      }
+
+      const isLocalDevHost =
+        typeof window !== 'undefined' &&
+        ['localhost', '127.0.0.1'].includes(window.location.hostname)
+
       const endpointCandidates = configuredApiUrl
         ? [configuredApiUrl]
-        : ['/api/contact', 'http://localhost:5000/api/contact']
+        : isLocalDevHost
+          ? ['/api/contact', 'http://localhost:5000/api/contact']
+          : []
+
+      if (endpointCandidates.length === 0) {
+        throw new Error('Contact API is not configured for production. Set VITE_CONTACT_API_URL.')
+      }
 
       let response = null
       let data = {}
@@ -54,7 +68,7 @@ export default function Contact() {
           break
         } catch (err) {
           if (err instanceof SyntaxError) {
-            throw new Error('Contact server returned an invalid response.')
+            throw new Error('Contact server returned a non-JSON response. Check API URL configuration.')
           }
           lastNetworkError = err
         }
