@@ -30,21 +30,7 @@ export default function Contact() {
     setIsSending(true)
 
     try {
-      const configuredApiUrl = import.meta.env.VITE_CONTACT_API_URL?.trim()
-      const isLocalDevHost =
-        typeof window !== 'undefined' &&
-        ['localhost', '127.0.0.1'].includes(window.location.hostname)
-      const endpoint = configuredApiUrl || (isLocalDevHost ? '/api/contact' : '')
-
-      if (!endpoint) {
-        throw new Error('Contact API is not configured for production. Set VITE_CONTACT_API_URL.')
-      }
-
-      if (endpoint.includes('resend.com/api-keys')) {
-        throw new Error('Invalid VITE_CONTACT_API_URL. Use your backend API URL, not the Resend dashboard URL.')
-      }
-
-      const response = await fetch(endpoint, {
+      const response = await fetch('/api/contact', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -53,7 +39,15 @@ export default function Contact() {
       })
 
       const raw = await response.text()
-      const data = raw ? JSON.parse(raw) : {}
+      let data = {}
+
+      if (raw) {
+        try {
+          data = JSON.parse(raw)
+        } catch {
+          data = {}
+        }
+      }
 
       if (!response.ok) {
         throw new Error(data?.message || 'Unable to send your message right now.')
