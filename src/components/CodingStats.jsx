@@ -3,10 +3,18 @@ import { useInView } from './hooks/useInView'
 import { useState, useEffect } from 'react' // Added for dynamics
 
 const DEFAULT_LEETCODE_PROFILE_URL = 'https://leetcode.com/u/shirwinprince/'
+const configuredLeetcodeStatsApiBase = import.meta.env.VITE_LEETCODE_STATS_API_BASE_URL?.trim()
 
 function getLeetcodeUsername(profileUrl) {
   const match = profileUrl.match(/leetcode\.com\/u\/([^/]+)/i)
   return match?.[1] || 'shirwinprince'
+}
+
+function buildLeetcodeStatsUrl(username) {
+  if (!configuredLeetcodeStatsApiBase) return ''
+  return configuredLeetcodeStatsApiBase
+    .replace('{username}', encodeURIComponent(username))
+    .replace(/\/$/, '')
 }
 
 /* ── tiny SVG icons (inline, no deps) ─────────────── */
@@ -135,8 +143,20 @@ export default function CodingStats() {
         // Keep fallback values when API is unavailable.
       })
 
-    // 2. Fetch LeetCode (via proxy)
-    fetch(`https://leetcode-api-faisalshohag.vercel.app/api/u/${leetcodeUsername}/`)
+    // 2. Fetch LeetCode only when a stats API is configured.
+    const leetcodeStatsUrl = buildLeetcodeStatsUrl(leetcodeUsername)
+    if (!leetcodeStatsUrl) {
+      setLeetcode((prev) => ({
+        ...prev,
+        rank: 'Unavailable',
+      }))
+
+      return () => {
+        isMounted = false
+      }
+    }
+
+    fetch(leetcodeStatsUrl)
       .then((res) => {
         if (!res.ok) {
           throw new Error(`LeetCode API error: ${res.status}`)
