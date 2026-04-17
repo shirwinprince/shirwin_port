@@ -30,7 +30,7 @@ export default function Contact() {
     setIsSending(true)
 
     try {
-      const configuredApiUrl = import.meta.env.VITE_CONTACT_API_URL
+      const configuredApiUrl = import.meta.env.RESEND_API_KEY
       if (configuredApiUrl && configuredApiUrl.includes('resend.com/api-keys')) {
         throw new Error('Invalid VITE_CONTACT_API_URL. Use your backend /api/contact URL, not the Resend dashboard URL.')
       }
