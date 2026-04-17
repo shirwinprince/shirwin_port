@@ -106,7 +106,7 @@ export default function Hero() {
                 VIEW PROJECTS
               </a>
               <a
-                href="/cv.pdf"
+                href="https://drive.google.com/file/d/1m1p5VmGunKOGC5tEOd_WdwcZUeZEcxUo/view?usp=sharing"
                 download
                 className="px-7 py-3 font-mono text-sm font-black text-black uppercase tracking-wider bg-white border-[3px] border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[4px] hover:translate-y-[4px] transition-all duration-150 flex items-center gap-2"
               >

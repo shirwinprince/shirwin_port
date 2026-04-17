@@ -5,32 +5,88 @@ import { useState } from 'react'
 export default function Contact() {
   const [ref, inView] = useInView(0.1)
   const [form, setForm] = useState({ name: '', email: '', message: '' })
+  const [isSending, setIsSending] = useState(false)
+  const [status, setStatus] = useState({ type: '', message: '' })
 
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value })
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    setStatus({ type: '', message: '' })
 
     // Validation
     if (!form.name.trim() || !form.email.trim() || !form.message.trim()) {
-      alert('Please fill in all fields')
+      setStatus({ type: 'error', message: 'Please fill in all fields.' })
       return
     }
 
     // Email regex validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(form.email)) {
-      alert('Please enter a valid email')
+      setStatus({ type: 'error', message: 'Please enter a valid email address.' })
       return
     }
 
-    const subject = encodeURIComponent(`Portfolio message from ${form.name}`)
-    const body = encodeURIComponent(
-      `Name: ${form.name}\nEmail: ${form.email}\n\nMessage:\n${form.message}`,
-    )
+    setIsSending(true)
 
-    window.location.href = `mailto:shirwinprince@gmail.com?subject=${subject}&body=${body}`
-    setForm({ name: '', email: '', message: '' })
+    try {
+      const configuredApiUrl = import.meta.env.VITE_CONTACT_API_URL
+      const endpointCandidates = configuredApiUrl
+        ? [configuredApiUrl]
+        : ['/api/contact', 'http://localhost:5000/api/contact']
+
+      let response = null
+      let data = {}
+      let lastNetworkError = null
+
+      for (const endpoint of endpointCandidates) {
+        try {
+          response = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(form),
+          })
+
+          const raw = await response.text()
+          data = raw ? JSON.parse(raw) : {}
+          break
+        } catch (err) {
+          if (err instanceof SyntaxError) {
+            throw new Error('Contact server returned an invalid response.')
+          }
+          lastNetworkError = err
+        }
+      }
+
+      if (!response) {
+        throw lastNetworkError || new Error('Contact server is unreachable.')
+      }
+
+      if (!response.ok) {
+        throw new Error(data?.message || 'Unable to send your message right now.')
+      }
+
+      setForm({ name: '', email: '', message: '' })
+      setStatus({
+        type: 'success',
+        message: data?.message || 'Message sent successfully. I will get back to you soon.',
+      })
+    } catch (error) {
+      const isNetworkError =
+        error?.name === 'TypeError' ||
+        (typeof error?.message === 'string' && error.message.toLowerCase().includes('fetch'))
+
+      setStatus({
+        type: 'error',
+        message: isNetworkError
+          ? 'Contact server is unreachable. Please make sure the backend is running.'
+          : error.message || 'Failed to send message. Please try again later.',
+      })
+    } finally {
+      setIsSending(false)
+    }
   }
 
   return (
@@ -204,10 +260,21 @@ export default function Contact() {
 
                   <button
                     type="submit"
+                    disabled={isSending}
                     className="w-full px-8 py-3.5 bg-[#3B82F6] border-[3px] border-black font-mono text-[13px] font-black text-white uppercase tracking-widest shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[4px] hover:translate-y-[4px] transition-all duration-150 cursor-pointer"
                   >
-                    SEND MESSAGE
+                    {isSending ? 'SENDING...' : 'SEND MESSAGE'}
                   </button>
+
+                  {status.message && (
+                    <div
+                      className={`border-[3px] border-black px-4 py-3 font-mono text-[12px] font-black uppercase tracking-wide ${
+                        status.type === 'success' ? 'bg-[#D9F99D] text-black' : 'bg-[#FECACA] text-black'
+                      }`}
+                    >
+                      {status.message}
+                    </div>
+                  )}
                 </form>
               </div>
             </div>
